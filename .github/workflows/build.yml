@@ -9,11 +9,13 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Fix Directory Structure
+    - name: Auto-locate and Move Project Files
       run: |
-        # إذا كان المجلد فرعي، سنقوم بنقل محتوياته للخارج لتكون في الواجهة مباشرة
-        if [ -d "FrontierEstate" ]; then
-          cp -r FrontierEstate/* .
+        # البحث عن ملف pom.xml في أي مجلد فرعي ونقله للجذر الرئيسي للمستودع
+        POM_DIR=$(dirname $(find . -name "pom.xml" -not -path "*/.*" | head -n 1))
+        if [ "$POM_DIR" != "." ] && [ -n "$POM_DIR" ]; then
+          echo "Moving files from $POM_DIR to root..."
+          cp -r "$POM_DIR"/* .
         fi
 
     - name: Set up JDK 21
