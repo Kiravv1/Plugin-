@@ -9,18 +9,43 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Show Files & Build
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Locate pom.xml and Build
       run: |
-        echo "Listing all files in workspace:"
-        find . -maxdepth 3
+        # 1. البحث عن ملف الـ ZIP وفك ضغطه إن وجد
+        ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+        if [ -n "$ZIP_FILE" ]; then
+          echo "Unzipping $ZIP_FILE..."
+          unzip -o "$ZIP_FILE" -d extracted_files || true
+        fi
+
+        # 2. البحث عن ملف pom.xml في أي مكان في المستودع
+        POM_FILE=$(find . -name "pom.xml" -not -path "*/.*" | head -n 1)
         
-        # الانتقال لأول مجلد يحتوي على pom.xml وبنائه
-        DIR=$(dirname $(find . -name "pom.xml" | head -n 1))
-        cd "$DIR"
+        if [ -z "$POM_FILE" ]; then
+          echo "ERROR: pom.xml not found anywhere!"
+          exit 1
+        fi
+
+        PROJECT_DIR=$(dirname "$POM_FILE")
+        echo "Found pom.xml in directory: $PROJECT_DIR"
+        
+        # 3. الانتقال للمجلد الصحيح وتشغيل عملية البناء
+        cd "$PROJECT_DIR"
         mvn clean package
+
+        # 4. نسخ ملف الـ JAR الناتج إلى مجلد رئيسي مخصص
+        mkdir -p $GITHUB_WORKSPACE/output_jar
+        cp target/*.jar $GITHUB_WORKSPACE/output_jar/
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: FrontierEstate-JAR
-        path: '**/target/*.jar'
+        path: output_jar/*.jar
