@@ -16,16 +16,17 @@ jobs:
         distribution: 'temurin'
         cache: maven
 
-    - name: Find and Build with Maven
+    - name: Build with Maven
       run: |
-        POM_PATH=$(find . -name "pom.xml" -not -path "*/.*" | head -n 1)
-        if [ -z "$POM_PATH" ]; then
-          echo "Error: pom.xml not found!"
+        # البحث عن ملف pom.xml وبناء المشروع في مكانه تلقائياً
+        POM_FILE=$(find . -name "pom.xml" -not -path "*/.*" | head -n 1)
+        if [ -z "$POM_FILE" ]; then
+          echo "pom.xml not found!"
           exit 1
-        }
-        DIR=$(dirname "$POM_PATH")
-        echo "Found pom.xml in: $DIR"
-        cd "$DIR"
+        fi
+        PROJECT_DIR=$(dirname "$POM_FILE")
+        echo "Building project in: $PROJECT_DIR"
+        cd "$PROJECT_DIR"
         mvn clean package
 
     - name: Upload Artifact
@@ -33,3 +34,4 @@ jobs:
       with:
         name: FrontierEstate-JAR
         path: '**/target/*.jar'
+        if-no-files-found: error
