@@ -17,10 +17,11 @@ jobs:
         cache: maven
 
     - name: Build with Maven
+      working-directory: ./FrontierEstate
       run: mvn clean package
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: FrontierEstate-JAR
-        path: target/*.jar
+        path: FrontierEstate/target/*.jar
