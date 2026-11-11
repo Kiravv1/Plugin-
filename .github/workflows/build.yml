@@ -1,51 +1,49 @@
 name: Build Minecraft Plugin
 
-on: [push, pull_request]
+on:
+  push:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up JDK 21
-      uses: actions/setup-java@v4
-      with:
-        java-version: '21'
-        distribution: 'temurin'
-        cache: maven
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
 
-    - name: Locate pom.xml and Build
-      run: |
-        # 1. البحث عن ملف الـ ZIP وفك ضغطه إن وجد
-        ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
-        if [ -n "$ZIP_FILE" ]; then
-          echo "Unzipping $ZIP_FILE..."
-          unzip -o "$ZIP_FILE" -d extracted_files || true
-        fi
+      - name: Unzip, locate pom.xml and build
+        run: |
+          ZIP_FILE=$(find . -maxdepth 2 -name "*.zip" | head -n 1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Unzipping $ZIP_FILE..."
+            unzip -o "$ZIP_FILE" -d extracted_files
+          fi
 
-        # 2. البحث عن ملف pom.xml في أي مكان في المستودع
-        POM_FILE=$(find . -name "pom.xml" -not -path "*/.*" | head -n 1)
-        
-        if [ -z "$POM_FILE" ]; then
-          echo "ERROR: pom.xml not found anywhere!"
-          exit 1
-        fi
+          POM_FILE=$(find . -name "pom.xml" -not -path "*/target/*" | head -n 1)
+          if [ -z "$POM_FILE" ]; then
+            echo "ERROR: pom.xml not found anywhere!"
+            find . -not -path "./.git/*" | head -100
+            exit 1
+          fi
 
-        PROJECT_DIR=$(dirname "$POM_FILE")
-        echo "Found pom.xml in directory: $PROJECT_DIR"
-        
-        # 3. الانتقال للمجلد الصحيح وتشغيل عملية البناء
-        cd "$PROJECT_DIR"
-        mvn clean package
+          PROJECT_DIR=$(dirname "$POM_FILE")
+          echo "Found pom.xml in: $PROJECT_DIR"
 
-        # 4. نسخ ملف الـ JAR الناتج إلى مجلد رئيسي مخصص
-        mkdir -p $GITHUB_WORKSPACE/output_jar
-        cp target/*.jar $GITHUB_WORKSPACE/output_jar/
+          cd "$PROJECT_DIR"
+          mvn -B clean package
 
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: FrontierEstate-JAR
-        path: output_jar/*.jar
+          mkdir -p "$GITHUB_WORKSPACE/output_jar"
+          cp target/FrontierEstate-*.jar "$GITHUB_WORKSPACE/output_jar/"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrontierEstate-JAR
+          path: output_jar/*.jar
+          if-no-files-found: error
